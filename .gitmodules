@@ -1,0 +1,3 @@
+[submodule "submodules/halbrowser-android"]
+	path = submodules/halbrowser-android
+	url = git://github.com/xaethos/halbrowser-android.git

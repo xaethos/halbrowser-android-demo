@@ -2,7 +2,6 @@
 <resources>
 
     <string name="app_name">Tabby</string>
-    <string name="hello_world">Hello world!</string>
-    <string name="menu_settings">Settings</string>
+    <string name="menu_reload">Refresh</string>
 
 </resources>
