@@ -1,15 +1,5 @@
-package net.xaethos.tabby;
+package net.xaethos.halbrowserdemo;
 
-import java.net.URI;
-import java.util.Map;
-
-import net.xaethos.android.halbrowser.APIClient;
-import net.xaethos.android.halbrowser.Relation;
-import net.xaethos.android.halbrowser.fragment.BaseResourceFragment;
-import net.xaethos.android.halbrowser.fragment.ResourceFragment;
-import net.xaethos.android.halbrowser.fragment.URITemplateDialogFragment;
-import net.xaethos.android.halparser.HALLink;
-import net.xaethos.android.halparser.HALResource;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -26,11 +16,23 @@ import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-public class MainActivity extends FragmentActivity
+import net.xaethos.android.halbrowser.APIClient;
+import net.xaethos.android.halbrowser.Relation;
+import net.xaethos.android.halbrowser.fragment.BaseResourceFragment;
+import net.xaethos.android.halbrowser.fragment.ResourceFragment;
+import net.xaethos.android.halbrowser.fragment.URITemplateDialogFragment;
+import net.xaethos.android.halparser.HALLink;
+import net.xaethos.android.halparser.HALResource;
+
+import java.net.URI;
+import java.util.Map;
+
+public class BrowserActivity extends FragmentActivity
         implements
-        ResourceFragment.OnLinkFollowListener,
+ResourceFragment.OnLinkFollowListener,
         LoaderManager.LoaderCallbacks<HALResource>
 {
+    public static final String EXTRA_API_URL = "api_url";
     private HALResource mResource;
     private ResourceFragment mFragment;
 
@@ -108,7 +110,8 @@ public class MainActivity extends FragmentActivity
     // *** Helper methods
 
     protected void followURI(URI target) {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(target.toString()), this, this.getClass());
+        Intent intent = new Intent(getIntent());
+        intent.setData(Uri.parse(target.toString()));
         startActivity(intent);
     }
 
@@ -128,18 +131,20 @@ public class MainActivity extends FragmentActivity
     }
 
     private ResourceFragment getResourceFragment(HALResource resource) {
-        BaseResourceFragment.Builder builder = new BaseResourceFragment.Builder();
-        builder.setResource(resource);
-        return builder.buildFragment(BaseResourceFragment.class);
+        return new BaseResourceFragment.Builder()
+                .setResource(resource)
+                .showBasicRels(true)
+                .buildFragment(BaseResourceFragment.class);
     }
 
     // *** LoaderManager.LoaderCallbacks<HALResource>
 
     @Override
     public Loader<HALResource> onCreateLoader(int id, Bundle args) {
-        APIClient client = new APIClient.Builder("http://enigmatic-plateau-6595.herokuapp.com/").setEntryPath("/articles")
-                                                                                                .build();
-        Uri uri = getIntent().getData();
+        Intent intent = getIntent();
+        Uri uri = intent.getData();
+        APIClient client = new APIClient.Builder(intent.getStringExtra(EXTRA_API_URL)).build();
+
         if (uri != null) {
             return client.getLoaderForURI(this, uri.toString());
         }
@@ -161,7 +166,7 @@ public class MainActivity extends FragmentActivity
             }
         }
         else {
-            Toast.makeText(MainActivity.this, "Couldn't GET relation :(", Toast.LENGTH_LONG).show();
+            Toast.makeText(BrowserActivity.this, "Couldn't GET relation :(", Toast.LENGTH_LONG).show();
             finish();
         }
     }

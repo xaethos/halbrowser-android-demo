@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="apis">
+        <item>http://enigmatic-plateau-6595.herokuapp.com/articles</item>
+        <item>http://haltalk.herokuapp.com/</item>
+    </string-array>
+</resources>
