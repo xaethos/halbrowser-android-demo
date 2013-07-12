@@ -4,7 +4,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.android.tools.build:gradle:0.4.+'
+    classpath 'com.android.tools.build:gradle:0.5.+'
   }
 }
 
@@ -16,6 +16,7 @@ repositories {
 
 dependencies {
   compile 'com.google.android:support-v4:+'
+  compile project('submodules:halbrowser-android:submodules:halparser-android')
   compile project('submodules:halbrowser-android')
 }
 
@@ -26,8 +27,4 @@ android {
   defaultConfig {
     testPackageName 'net.xaethos.android.halbrowser.tests'
   }
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '1.6'
 }
