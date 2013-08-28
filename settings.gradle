@@ -1,2 +1,1 @@
-include 'submodules:halbrowser-android'
-include 'submodules:halbrowser-android:submodules:halparser-android'
+include 'halbrowser-android:halparser-android'

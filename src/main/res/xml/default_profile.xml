@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resource
+        href="http://example.com/profile/sample"
+        layout="@layout/default_resource">
+
+    <defaultProperty
+            layout="@android:layout/simple_list_item_2"
+            container="@android:id/list"
+            labelView="@android:id/text1"
+            contentView="@android:id/text2"/>
+
+    <defaultLink
+            layout="@android:layout/simple_list_item_1"
+            container="@android:id/list"
+            labelView="@android:id/text1"/>
+
+    <defaultResource
+            layout="@android:layout/simple_list_item_1"
+            container="@android:id/list">
+
+        <link
+                rel="self"
+                labelView="@android:id/text1"/>
+
+    </defaultResource>
+
+</resource>

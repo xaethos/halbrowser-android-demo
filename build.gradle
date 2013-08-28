@@ -16,8 +16,8 @@ repositories {
 
 dependencies {
   compile 'com.google.android:support-v4:+'
-  compile project('submodules:halbrowser-android:submodules:halparser-android')
-  compile project('submodules:halbrowser-android')
+  compile project('halbrowser-android:halparser-android')
+  compile project('halbrowser-android')
 }
 
 android {
