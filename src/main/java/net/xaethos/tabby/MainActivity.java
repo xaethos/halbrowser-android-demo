@@ -1,18 +1,10 @@
 package net.xaethos.tabby;
 
-import java.net.URI;
-import java.util.Map;
-
-import net.xaethos.android.halbrowser.APIClient;
-import net.xaethos.android.halbrowser.Relation;
-import net.xaethos.android.halbrowser.fragment.BaseResourceFragment;
-import net.xaethos.android.halbrowser.fragment.ResourceFragment;
-import net.xaethos.android.halbrowser.fragment.URITemplateDialogFragment;
-import net.xaethos.android.halparser.HALLink;
-import net.xaethos.android.halparser.HALResource;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -26,13 +18,28 @@ import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import net.xaethos.android.halbrowser.APIClient;
+import net.xaethos.android.halbrowser.fragment.OnLinkFollowListener;
+import net.xaethos.android.halbrowser.fragment.ProfileResourceFragment;
+import net.xaethos.android.halbrowser.fragment.URITemplateDialogFragment;
+import net.xaethos.android.halbrowser.profile.ProfileInflater;
+import net.xaethos.android.halparser.HALLink;
+import net.xaethos.android.halparser.HALResource;
+
+import java.net.URI;
+import java.util.Map;
+
 public class MainActivity extends FragmentActivity
         implements
-        ResourceFragment.OnLinkFollowListener,
+        OnLinkFollowListener,
         LoaderManager.LoaderCallbacks<HALResource>
 {
+    private static final String SELF = "self";
+    private static final URI BASE_URI = URI.create("http://enigmatic-plateau-6595.herokuapp.com/articles");
+    public static final int FRAGMENT_ID = android.R.id.content;
+
     private HALResource mResource;
-    private ResourceFragment mFragment;
+    private ProfileInflater mProfileInflater = new ProfileInflater();
 
     // *** Activity life-cycle
 
@@ -40,7 +47,6 @@ public class MainActivity extends FragmentActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        loadResourceFragment(null);
         getSupportLoaderManager().initLoader(0, null, this);
     }
 
@@ -56,12 +62,12 @@ public class MainActivity extends FragmentActivity
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         MenuItem menuItem = menu.findItem(R.id.menu_reload);
-        if (mResource != null) {
-            HALLink link = mResource.getLink(Relation.SELF);
-            menuItem.setEnabled(link != null);
-        }
-        else {
-            menuItem.setEnabled(false);
+        if (menuItem != null) {
+            if (mResource != null) {
+                menuItem.setEnabled(mResource.getLink(SELF) != null);
+            } else {
+                menuItem.setEnabled(false);
+            }
         }
         return super.onPrepareOptionsMenu(menu);
     }
@@ -96,7 +102,7 @@ public class MainActivity extends FragmentActivity
             return;
         }
 
-        if (link.getRel() == "external") {
+        if ("external".equals(link.getRel())) {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(link.getHref()));
             startActivity(intent);
             return;
@@ -115,35 +121,42 @@ public class MainActivity extends FragmentActivity
     private void loadResourceFragment(HALResource resource) {
         FragmentManager manager = getSupportFragmentManager();
 
-        mFragment = (ResourceFragment) manager.findFragmentById(android.R.id.content);
-        if (mFragment == null) {
-            ((ViewGroup) findViewById(android.R.id.content)).removeAllViews();
+        Fragment currentFragment = manager.findFragmentById(FRAGMENT_ID);
+        ProfileResourceFragment newFragment = newResourceFragment(resource);
 
-            mFragment = getResourceFragment(resource);
+        if (currentFragment == null && newFragment == null) return;
 
-            FragmentTransaction transaction = manager.beginTransaction();
-            transaction.add(android.R.id.content, (Fragment) mFragment);
-            transaction.commit();
+        FragmentTransaction transaction = manager.beginTransaction();
+
+        if (currentFragment == null) {
+            ((ViewGroup) findViewById(FRAGMENT_ID)).removeAllViews();
+            transaction.add(FRAGMENT_ID, newFragment);
+        } else if (newFragment != null) {
+            transaction.replace(FRAGMENT_ID, newFragment);
+        } else {
+            transaction.remove(currentFragment);
         }
+
+        transaction.commit();
     }
 
-    private ResourceFragment getResourceFragment(HALResource resource) {
-        BaseResourceFragment.Builder builder = new BaseResourceFragment.Builder();
-        builder.setResource(resource);
-        return builder.buildFragment(BaseResourceFragment.class);
+    private ProfileResourceFragment newResourceFragment(HALResource resource) {
+        if (resource == null) return null;
+        ProfileResourceFragment fragment = new ProfileResourceFragment();
+        fragment.setConfiguration(mProfileInflater.inflate(this, R.xml.default_profile));
+        fragment.setResource(resource);
+        return fragment;
     }
 
     // *** LoaderManager.LoaderCallbacks<HALResource>
 
     @Override
     public Loader<HALResource> onCreateLoader(int id, Bundle args) {
-        APIClient client = new APIClient.Builder("http://enigmatic-plateau-6595.herokuapp.com/").setEntryPath("/articles")
-                                                                                                .build();
+        APIClient client = new APIClient(BASE_URI);
         Uri uri = getIntent().getData();
         if (uri != null) {
             return client.getLoaderForURI(this, uri.toString());
-        }
-        else {
+        } else {
             return client.getLoader(this);
         }
     }
@@ -151,16 +164,14 @@ public class MainActivity extends FragmentActivity
     @Override
     public void onLoadFinished(Loader<HALResource> loader, HALResource resource) {
         mResource = resource;
-        mFragment.setResource(resource);
-        invalidateOptionsMenu();
+        mHandler.sendEmptyMessage(0);
 
         if (resource != null) {
-            String title = resource.getLink(Relation.SELF).getTitle();
+            String title = resource.getLink(SELF).getTitle();
             if (!TextUtils.isEmpty(title)) {
                 setTitle(title);
             }
-        }
-        else {
+        } else {
             Toast.makeText(MainActivity.this, "Couldn't GET relation :(", Toast.LENGTH_LONG).show();
             finish();
         }
@@ -169,8 +180,16 @@ public class MainActivity extends FragmentActivity
     @Override
     public void onLoaderReset(Loader<HALResource> loader) {
         mResource = null;
-        mFragment.setResource(null);
-        invalidateOptionsMenu();
+        mHandler.sendEmptyMessage(0);
     }
+
+    private Handler mHandler = new Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(Message message) {
+            loadResourceFragment(mResource);
+            invalidateOptionsMenu();
+            return true;
+        }
+    });
 
 }
