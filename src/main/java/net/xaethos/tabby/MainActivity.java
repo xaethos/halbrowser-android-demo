@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -38,7 +39,6 @@ public class MainActivity extends FragmentActivity
     public static final int FRAGMENT_ID = android.R.id.content;
 
     private HALResource mResource;
-    private ProfileResourceFragment mFragment;
     private ProfileInflater mProfileInflater = new ProfileInflater();
 
     // *** Activity life-cycle
@@ -47,7 +47,6 @@ public class MainActivity extends FragmentActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        loadResourceFragment(null);
         getSupportLoaderManager().initLoader(0, null, this);
     }
 
@@ -121,18 +120,28 @@ public class MainActivity extends FragmentActivity
 
     private void loadResourceFragment(HALResource resource) {
         FragmentManager manager = getSupportFragmentManager();
-        mFragment = newResourceFragment(resource);
+
+        Fragment currentFragment = manager.findFragmentById(FRAGMENT_ID);
+        ProfileResourceFragment newFragment = newResourceFragment(resource);
+
+        if (currentFragment == null && newFragment == null) return;
+
         FragmentTransaction transaction = manager.beginTransaction();
-        if (manager.findFragmentById(FRAGMENT_ID) == null) {
+
+        if (currentFragment == null) {
             ((ViewGroup) findViewById(FRAGMENT_ID)).removeAllViews();
-            transaction.add(FRAGMENT_ID, mFragment);
+            transaction.add(FRAGMENT_ID, newFragment);
+        } else if (newFragment != null) {
+            transaction.replace(FRAGMENT_ID, newFragment);
         } else {
-            transaction.replace(FRAGMENT_ID, mFragment);
+            transaction.remove(currentFragment);
         }
+
         transaction.commit();
     }
 
     private ProfileResourceFragment newResourceFragment(HALResource resource) {
+        if (resource == null) return null;
         ProfileResourceFragment fragment = new ProfileResourceFragment();
         fragment.setConfiguration(mProfileInflater.inflate(this, R.xml.default_profile));
         fragment.setResource(resource);
