@@ -3,6 +3,8 @@ package net.xaethos.tabby;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -33,6 +35,7 @@ public class MainActivity extends FragmentActivity
 {
     private static final String SELF = "self";
     private static final URI BASE_URI = URI.create("http://enigmatic-plateau-6595.herokuapp.com/articles");
+    public static final int FRAGMENT_ID = android.R.id.content;
 
     private HALResource mResource;
     private ProfileResourceFragment mFragment;
@@ -118,20 +121,18 @@ public class MainActivity extends FragmentActivity
 
     private void loadResourceFragment(HALResource resource) {
         FragmentManager manager = getSupportFragmentManager();
-
-        mFragment = (ProfileResourceFragment) manager.findFragmentById(android.R.id.content);
-        if (mFragment == null) {
-            ((ViewGroup) findViewById(android.R.id.content)).removeAllViews();
-
-            mFragment = getResourceFragment(resource);
-
-            FragmentTransaction transaction = manager.beginTransaction();
-            transaction.add(android.R.id.content, mFragment);
-            transaction.commit();
+        mFragment = newResourceFragment(resource);
+        FragmentTransaction transaction = manager.beginTransaction();
+        if (manager.findFragmentById(FRAGMENT_ID) == null) {
+            ((ViewGroup) findViewById(FRAGMENT_ID)).removeAllViews();
+            transaction.add(FRAGMENT_ID, mFragment);
+        } else {
+            transaction.replace(FRAGMENT_ID, mFragment);
         }
+        transaction.commit();
     }
 
-    private ProfileResourceFragment getResourceFragment(HALResource resource) {
+    private ProfileResourceFragment newResourceFragment(HALResource resource) {
         ProfileResourceFragment fragment = new ProfileResourceFragment();
         fragment.setConfiguration(mProfileInflater.inflate(this, R.xml.default_profile));
         fragment.setResource(resource);
@@ -154,8 +155,7 @@ public class MainActivity extends FragmentActivity
     @Override
     public void onLoadFinished(Loader<HALResource> loader, HALResource resource) {
         mResource = resource;
-        mFragment.setResource(resource);
-        invalidateOptionsMenu();
+        mHandler.sendEmptyMessage(0);
 
         if (resource != null) {
             String title = resource.getLink(SELF).getTitle();
@@ -171,8 +171,16 @@ public class MainActivity extends FragmentActivity
     @Override
     public void onLoaderReset(Loader<HALResource> loader) {
         mResource = null;
-        mFragment.setResource(null);
-        invalidateOptionsMenu();
+        mHandler.sendEmptyMessage(0);
     }
+
+    private Handler mHandler = new Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(Message message) {
+            loadResourceFragment(mResource);
+            invalidateOptionsMenu();
+            return true;
+        }
+    });
 
 }
